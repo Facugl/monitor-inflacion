@@ -1,0 +1,19 @@
+# Backend
+backend/target/
+*.class
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Entornos
+.env
+*.env.local
+# El template sí se commitea: es el punto de partida de quien clona el repo.
+!.env.example
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
