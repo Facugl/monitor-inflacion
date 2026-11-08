@@ -17,7 +17,9 @@ spring:
     locations: classpath:db/migration
 
 server:
-  port: ${SERVER_PORT:8080}
+  # Las PaaS (Railway, Render, Fly) inyectan PORT y esperan que la app escuche ahí.
+  # SERVER_PORT queda como alias para no romper a quien ya lo usaba localmente.
+  port: ${PORT:${SERVER_PORT:8080}}
 
 indec:
   api:
@@ -37,6 +39,10 @@ indec:
     # pero sincronizar de más es gratis e idempotente.
     cron: ${INDEC_SYNC_CRON:0 0 9 * * *}
     habilitado: ${INDEC_SYNC_HABILITADO:true}
+    # Sincroniza al arrancar SOLO si la base está vacía. Sin esto, un despliegue
+    # nuevo queda mostrando "no hay datos" hasta el próximo cron o hasta que
+    # alguien apriete el botón.
+    al-iniciar: ${INDEC_SYNC_AL_INICIAR:true}
 
 springdoc:
   swagger-ui:

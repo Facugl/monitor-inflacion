@@ -76,6 +76,76 @@ cp .env.example .env
 npm run dev
 ```
 
+## Despliegue (Railway + Vercel)
+
+El backend necesita Postgres, así que va a Railway; el frontend es estático y va a
+Vercel. Los archivos de configuración ya están versionados: `backend/railway.json`
+y `frontend/vercel.json`.
+
+Hay una dependencia circular entre los dos dominios —el frontend necesita la URL
+del backend para compilar, y el backend necesita la del frontend para el CORS—,
+así que el orden importa.
+
+### 1. Backend en Railway
+
+Creá un proyecto, agregale un **Postgres** y después un servicio desde este repo
+con **Root Directory = `backend`**. Variables del servicio:
+
+| Variable | Valor |
+|---|---|
+| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://${{Postgres.PGHOST}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}` |
+| `SPRING_DATASOURCE_USERNAME` | `${{Postgres.PGUSER}}` |
+| `SPRING_DATASOURCE_PASSWORD` | `${{Postgres.PGPASSWORD}}` |
+| `INDEC_API_TOKEN` | tu token del INDEC |
+
+Dos cosas que conviene entender y no copiar a ciegas:
+
+- **No alcanza con el `DATABASE_URL` que genera Railway.** Lo publica como
+  `postgres://usuario:pass@host:puerto/base`, y el driver JDBC necesita
+  `jdbc:postgresql://…`. Por eso se arma la URL a mano con las piezas sueltas
+  (`PGHOST`, `PGPORT`, `PGDATABASE`) usando variables de referencia, que además se
+  mantienen sincronizadas si Railway rota las credenciales.
+- **`SPRING_DATASOURCE_URL` pisa al `spring.datasource.url` del `application.yml`.**
+  No hace falta tocar el archivo: en Spring Boot las variables de entorno tienen
+  más precedencia que la configuración empaquetada.
+
+Generá el dominio público del servicio y copialo.
+
+### 2. Frontend en Vercel
+
+Importá el repo con **Root Directory = `frontend`** (Vercel detecta Vite solo) y
+definí:
+
+| Variable | Valor |
+|---|---|
+| `VITE_API_BASE_URL` | `https://TU-BACKEND.up.railway.app/api/v1` |
+
+Vite **incrusta las variables en tiempo de build**, no las lee en runtime: si la
+cambiás después, hay que volver a deployar para que tenga efecto. Solo se exponen
+las que empiezan con `VITE_`.
+
+### 3. Cerrar el círculo
+
+Volvé a Railway y agregá, con el dominio que te dio Vercel:
+
+| Variable | Valor |
+|---|---|
+| `APP_CORS_ALLOWED_ORIGINS` | `https://TU-APP.vercel.app` |
+
+Redeployá el backend. Sin esto el navegador bloquea las llamadas por CORS y el
+dashboard se ve vacío aunque la API responda bien.
+
+### Primera carga de datos
+
+No hay que hacer nada: al arrancar con la base vacía, el backend sincroniza solo
+contra la API-INDEC (`indec.sync.al-iniciar`, por defecto activo). Si la base ya
+tiene datos no vuelve a pedirlos. Después sigue el cron diario, y siempre queda el
+botón del dashboard o `POST /api/v1/ipc/sync`.
+
+Si falta el `INDEC_API_TOKEN`, la app **arranca igual** y la sincronización falla
+con un error en el log: preferible a que el servicio no levante y Railway lo marque
+como caído.
+
 ## Verificar la estructura de datos de la API-INDEC
 
 El endpoint `/ipc_nacional` devuelve, además del índice, variaciones ya calculadas por
