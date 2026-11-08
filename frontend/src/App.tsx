@@ -1,14 +1,16 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { sincronizarIpc } from "./api/client";
-import { useEvolucionIpc, useResumenIpc } from "./hooks/useIpc";
+import { useEvolucionIpc, useRankingCategorias, useResumenIpc } from "./hooks/useIpc";
 import { ResumenCard } from "./components/ResumenCard";
 import { GraficoEvolucionIpc } from "./components/GraficoEvolucionIpc";
+import { RankingCategorias } from "./components/RankingCategorias";
 import { CalculadoraPoderCompra } from "./components/CalculadoraPoderCompra";
 
 function App() {
   const queryClient = useQueryClient();
   const resumen = useResumenIpc();
   const evolucion = useEvolucionIpc(24);
+  const categorias = useRankingCategorias();
 
   const sync = useMutation({
     mutationFn: sincronizarIpc,
@@ -47,6 +49,12 @@ function App() {
         <div className="grid gap-6">
           {resumen.data && <ResumenCard resumen={resumen.data} />}
           {evolucion.data && evolucion.data.length > 0 && <GraficoEvolucionIpc datos={evolucion.data} />}
+          {categorias.data && (
+            <RankingCategorias
+              datos={categorias.data}
+              nivelGeneralPct={resumen.data?.variacionMensualPct ?? null}
+            />
+          )}
           <CalculadoraPoderCompra />
         </div>
 

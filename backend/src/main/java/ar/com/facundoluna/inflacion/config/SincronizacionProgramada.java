@@ -32,8 +32,9 @@ public class SincronizacionProgramada {
             return;
         }
         try {
-            int cantidad = sincronizarIpcUseCase.ejecutar();
-            log.info("Sincronización programada de IPC completa: {} puntos", cantidad);
+            var resultado = sincronizarIpcUseCase.ejecutar();
+            log.info("Sincronización programada de IPC completa: {} puntos de nivel general, {} de categorías",
+                    resultado.puntosNivelGeneral(), resultado.puntosCategorias());
         } catch (Exception e) {
             log.error("Falló la sincronización programada de IPC", e);
         }

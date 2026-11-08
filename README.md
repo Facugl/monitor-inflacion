@@ -1,8 +1,9 @@
 # Monitor de Inflación Argentina
 
-Dashboard que sincroniza el nivel general del IPC desde la [API pública del INDEC](https://api.indec.gob.ar/docs)
-hacia una base propia, calcula variación mensual / interanual / acumulada, y simula qué
-le pasa al poder de compra de un sueldo nominal fijo mes a mes.
+Dashboard que sincroniza el IPC desde la [API pública del INDEC](https://api.indec.gob.ar/docs)
+hacia una base propia, calcula variación mensual / interanual / acumulada, muestra qué
+rubro aumentó más en el mes, y simula qué le pasa al poder de compra de un sueldo
+nominal fijo mes a mes.
 
 Backend en **Java 17 + Spring Boot 3** con arquitectura hexagonal (dominio sin dependencias
 de framework, puertos y adaptadores), frontend en **React + TypeScript**.
@@ -24,9 +25,15 @@ application/   -> casos de uso + puertos (interfaces) de entrada/salida
 infrastructure/-> adaptadores: REST (web), JPA (persistence), cliente HTTP a la API-INDEC
 ```
 
-El dominio (`CalculadoraVariacionesIpc`, `CalculadoraPoderCompra`) es Java puro: se puede
-testear sin levantar Spring ni una base de datos. La infraestructura es intercambiable
-— por ejemplo, cambiar Postgres por otra base implica tocar solo `infrastructure/persistence`.
+El dominio (`CalculadoraVariacionesIpc`, `CalculadoraVariacionesPorCategoria`,
+`CalculadoraPoderCompra`) es Java puro: se puede testear sin levantar Spring ni una base
+de datos. La infraestructura es intercambiable — por ejemplo, cambiar Postgres por otra
+base implica tocar solo `infrastructure/persistence`.
+
+La apertura por categoría es el ejemplo de que eso no es decorativo: agregar las doce
+divisiones COICOP fue sumar un modelo de dominio, un puerto y sus adaptadores, sin tocar
+el cálculo del nivel general. Las dos calculadoras comparten la fórmula
+(`VariacionPorcentual`) para que los números del dashboard cierren entre sí.
 
 ## 1. Conseguir tu JWT Token de la API-INDEC
 
@@ -92,9 +99,10 @@ curl -H "Authorization: Bearer $INDEC_API_TOKEN" \
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| POST | `/api/v1/ipc/sync` | Sincroniza el IPC desde la API-INDEC |
+| POST | `/api/v1/ipc/sync` | Sincroniza el IPC (nivel general + categorías) desde la API-INDEC |
 | GET | `/api/v1/ipc/evolucion?desde=AAAAMM&hasta=AAAAMM` | Serie con variaciones |
 | GET | `/api/v1/ipc/resumen` | Variación del último período cargado |
+| GET | `/api/v1/ipc/categorias[?periodo=AAAAMM]` | Las 12 divisiones COICOP rankeadas por variación mensual |
 | POST | `/api/v1/poder-compra` | Simula poder de compra de un sueldo fijo |
 
 Documentación interactiva completa en `/docs` (Swagger UI) una vez levantado el backend.

@@ -1,14 +1,17 @@
 package ar.com.facundoluna.inflacion.infrastructure.web;
 
 import ar.com.facundoluna.inflacion.application.usecase.ObtenerEvolucionIpcUseCase;
+import ar.com.facundoluna.inflacion.application.usecase.ObtenerRankingCategoriasUseCase;
 import ar.com.facundoluna.inflacion.application.usecase.ObtenerResumenIpcUseCase;
 import ar.com.facundoluna.inflacion.application.usecase.SincronizarIpcUseCase;
 import ar.com.facundoluna.inflacion.domain.model.PeriodoMensual;
 import ar.com.facundoluna.inflacion.domain.model.RegionIpc;
 import ar.com.facundoluna.inflacion.domain.model.SerieTipo;
 import ar.com.facundoluna.inflacion.infrastructure.web.dto.SincronizacionResponse;
+import ar.com.facundoluna.inflacion.infrastructure.web.dto.VariacionCategoriaResponse;
 import ar.com.facundoluna.inflacion.infrastructure.web.dto.VariacionIpcResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,22 +26,23 @@ public class IpcController {
     private final SincronizarIpcUseCase sincronizarIpcUseCase;
     private final ObtenerEvolucionIpcUseCase obtenerEvolucionIpcUseCase;
     private final ObtenerResumenIpcUseCase obtenerResumenIpcUseCase;
+    private final ObtenerRankingCategoriasUseCase obtenerRankingCategoriasUseCase;
 
     public IpcController(
             SincronizarIpcUseCase sincronizarIpcUseCase,
             ObtenerEvolucionIpcUseCase obtenerEvolucionIpcUseCase,
-            ObtenerResumenIpcUseCase obtenerResumenIpcUseCase) {
+            ObtenerResumenIpcUseCase obtenerResumenIpcUseCase,
+            ObtenerRankingCategoriasUseCase obtenerRankingCategoriasUseCase) {
         this.sincronizarIpcUseCase = sincronizarIpcUseCase;
         this.obtenerEvolucionIpcUseCase = obtenerEvolucionIpcUseCase;
         this.obtenerResumenIpcUseCase = obtenerResumenIpcUseCase;
+        this.obtenerRankingCategoriasUseCase = obtenerRankingCategoriasUseCase;
     }
 
     @PostMapping("/sync")
-    @Operation(summary = "Sincroniza el nivel general del IPC desde la API-INDEC hacia la base local")
+    @Operation(summary = "Sincroniza el IPC (nivel general y categorías) desde la API-INDEC hacia la base local")
     public ResponseEntity<SincronizacionResponse> sincronizar() {
-        int cantidad = sincronizarIpcUseCase.ejecutar();
-        return ResponseEntity.ok(new SincronizacionResponse(
-                cantidad, "Sincronización completa: " + cantidad + " puntos procesados"));
+        return ResponseEntity.ok(SincronizacionResponse.desde(sincronizarIpcUseCase.ejecutar()));
     }
 
     @GetMapping("/evolucion")
@@ -63,5 +67,21 @@ public class IpcController {
     ) {
         var variacion = obtenerResumenIpcUseCase.ejecutar(region, serie);
         return ResponseEntity.ok(VariacionIpcResponse.desde(variacion));
+    }
+
+    @GetMapping("/categorias")
+    @Operation(summary = "Qué aumentó más: las 12 divisiones COICOP del IPC rankeadas por variación mensual")
+    public ResponseEntity<List<VariacionCategoriaResponse>> categorias(
+            @RequestParam(required = false)
+            @Parameter(description = "Período AAAAMM a rankear. Si se omite, usa el último sincronizado.")
+            String periodo,
+            @RequestParam(defaultValue = "NACIONAL") RegionIpc region
+    ) {
+        PeriodoMensual objetivo = periodo == null || periodo.isBlank()
+                ? null
+                : PeriodoMensual.desdeCodigoIndec(periodo);
+
+        var ranking = obtenerRankingCategoriasUseCase.ejecutar(region, objetivo);
+        return ResponseEntity.ok(ranking.stream().map(VariacionCategoriaResponse::desde).toList());
     }
 }

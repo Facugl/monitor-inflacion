@@ -5,8 +5,6 @@ import ar.com.facundoluna.inflacion.domain.model.PeriodoMensual;
 import ar.com.facundoluna.inflacion.domain.model.VariacionIpc;
 
 import java.math.BigDecimal;
-import java.math.MathContext;
-import java.math.RoundingMode;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,9 +22,6 @@ import java.util.Optional;
  * </ul>
  */
 public class CalculadoraVariacionesIpc {
-
-    private static final int ESCALA_DECIMAL = 2;
-    private static final MathContext CONTEXTO = new MathContext(10, RoundingMode.HALF_UP);
 
     /**
      * Calcula las tres variaciones para cada punto de la serie recibida.
@@ -63,10 +58,7 @@ public class CalculadoraVariacionesIpc {
     }
 
     private BigDecimal variacionContra(NivelGeneralIpc actual, NivelGeneralIpc base) {
-        if (base == null || base.indice().signum() == 0) {
-            return null;
-        }
-        return porcentaje(actual.indice(), base.indice());
+        return VariacionPorcentual.entre(actual.indice(), base == null ? null : base.indice());
     }
 
     /**
@@ -77,13 +69,6 @@ public class CalculadoraVariacionesIpc {
     private BigDecimal calcularAcumuladaAnio(NivelGeneralIpc actual, Map<PeriodoMensual, NivelGeneralIpc> porPeriodo) {
         NivelGeneralIpc diciembreAnterior = porPeriodo.get(actual.periodo().diciembreAnioAnterior());
         return variacionContra(actual, diciembreAnterior);
-    }
-
-    private BigDecimal porcentaje(BigDecimal valorActual, BigDecimal valorBase) {
-        BigDecimal razon = valorActual.divide(valorBase, CONTEXTO);
-        return razon.subtract(BigDecimal.ONE)
-                .multiply(BigDecimal.valueOf(100))
-                .setScale(ESCALA_DECIMAL, RoundingMode.HALF_UP);
     }
 
     /**

@@ -1,5 +1,6 @@
 package ar.com.facundoluna.inflacion.application.port.out;
 
+import ar.com.facundoluna.inflacion.domain.model.IndiceCategoriaIpc;
 import ar.com.facundoluna.inflacion.domain.model.NivelGeneralIpc;
 import ar.com.facundoluna.inflacion.domain.model.PeriodoMensual;
 
@@ -17,4 +18,10 @@ public interface IndecApiClientPort {
      * períodos disponibles desde {@code desde} en adelante.
      */
     List<NivelGeneralIpc> obtenerNivelGeneralIpcNacional(PeriodoMensual desde);
+
+    /**
+     * Trae el IPC nacional abierto por categoría (las doce divisiones COICOP) para
+     * todos los períodos disponibles desde {@code desde} en adelante.
+     */
+    List<IndiceCategoriaIpc> obtenerIndicesPorCategoriaNacional(PeriodoMensual desde);
 }

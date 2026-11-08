@@ -1,7 +1,9 @@
 package ar.com.facundoluna.inflacion.infrastructure.web;
 
 import ar.com.facundoluna.inflacion.application.usecase.ObtenerEvolucionIpcUseCase;
+import ar.com.facundoluna.inflacion.application.usecase.ObtenerRankingCategoriasUseCase;
 import ar.com.facundoluna.inflacion.application.usecase.ObtenerResumenIpcUseCase;
+import ar.com.facundoluna.inflacion.application.usecase.ResultadoSincronizacion;
 import ar.com.facundoluna.inflacion.application.usecase.SincronizarIpcUseCase;
 import ar.com.facundoluna.inflacion.domain.model.*;
 import org.junit.jupiter.api.Test;
@@ -35,13 +37,45 @@ class IpcControllerTest {
     @MockBean
     private ObtenerResumenIpcUseCase obtenerResumenIpcUseCase;
 
+    @MockBean
+    private ObtenerRankingCategoriasUseCase obtenerRankingCategoriasUseCase;
+
     @Test
-    void sincronizarDevuelveLaCantidadDePuntosProcesados() throws Exception {
-        given(sincronizarIpcUseCase.ejecutar()).willReturn(14);
+    void sincronizarDevuelveLaCantidadDePuntosProcesadosDeCadaSerie() throws Exception {
+        given(sincronizarIpcUseCase.ejecutar()).willReturn(new ResultadoSincronizacion(14, 168));
 
         mockMvc.perform(post("/api/v1/ipc/sync"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.puntosSincronizados").value(14));
+                .andExpect(jsonPath("$.puntosSincronizados").value(182))
+                .andExpect(jsonPath("$.puntosNivelGeneral").value(14))
+                .andExpect(jsonPath("$.puntosCategorias").value(168));
+    }
+
+    @Test
+    void categoriasDevuelveElRankingDelPeriodo() throws Exception {
+        var alimentos = new VariacionCategoriaIpc(
+                PeriodoMensual.of(2026, 9), RegionIpc.NACIONAL,
+                new CategoriaIpc("01", "Alimentos y bebidas no alcohólicas"),
+                new BigDecimal("13384.1945"), new BigDecimal("3.10"),
+                new BigDecimal("35.20"), new BigDecimal("24.80"));
+
+        given(obtenerRankingCategoriasUseCase.ejecutar(any(), any())).willReturn(List.of(alimentos));
+
+        mockMvc.perform(get("/api/v1/ipc/categorias"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].codigo").value("01"))
+                .andExpect(jsonPath("$[0].categoria").value("Alimentos y bebidas no alcohólicas"))
+                .andExpect(jsonPath("$[0].variacionMensualPct").value(3.10));
+    }
+
+    @Test
+    void categoriasDevuelve404SiNoHayDatosDeCategorias() throws Exception {
+        given(obtenerRankingCategoriasUseCase.ejecutar(any(), any()))
+                .willThrow(new NoSuchElementException("Todavía no hay datos de categorías sincronizados"));
+
+        mockMvc.perform(get("/api/v1/ipc/categorias"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.mensaje").value("Todavía no hay datos de categorías sincronizados"));
     }
 
     @Test

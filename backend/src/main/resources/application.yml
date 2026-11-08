@@ -27,6 +27,9 @@ indec:
     # La API-INDEC devuelve este literal SIN tilde ("Indice"); con tilde el filtro
     # PostgREST no matchea nada y la sincronización trae 0 puntos.
     tipo-indicador-indice: ${INDEC_TIPO_INDICADOR_INDICE:Indice}
+    # Literal del campo "nivel" que identifica las aperturas por división COICOP
+    # (las 12 categorías: alimentos, vivienda, salud, transporte, …). Este SÍ con tilde.
+    nivel-division: ${INDEC_NIVEL_DIVISION:División}
     region-nacional: ${INDEC_REGION_NACIONAL:Nacional}
   sync:
     # Cron de sincronización automática. Por defecto: todos los días a las 9:00.

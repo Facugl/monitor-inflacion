@@ -14,6 +14,17 @@ export interface VariacionIpc {
   variacionAcumuladaAnioPct: number | null;
 }
 
+export interface VariacionCategoria {
+  periodo: string; // AAAAMM
+  region: string;
+  codigo: string; // división COICOP: "01".."12"
+  categoria: string;
+  indice: number;
+  variacionMensualPct: number | null;
+  variacionInteranualPct: number | null;
+  variacionAcumuladaAnioPct: number | null;
+}
+
 export interface EvolucionSueldoReal {
   periodo: string;
   sueldoNominal: number;
@@ -31,7 +42,19 @@ export async function obtenerResumenIpc(): Promise<VariacionIpc> {
   return data;
 }
 
-export async function sincronizarIpc(): Promise<{ puntosSincronizados: number; mensaje: string }> {
+export async function obtenerRankingCategorias(periodo?: string): Promise<VariacionCategoria[]> {
+  const { data } = await api.get<VariacionCategoria[]>("/ipc/categorias", {
+    params: periodo ? { periodo } : undefined,
+  });
+  return data;
+}
+
+export async function sincronizarIpc(): Promise<{
+  puntosSincronizados: number;
+  puntosNivelGeneral: number;
+  puntosCategorias: number;
+  mensaje: string;
+}> {
   const { data } = await api.post("/ipc/sync");
   return data;
 }

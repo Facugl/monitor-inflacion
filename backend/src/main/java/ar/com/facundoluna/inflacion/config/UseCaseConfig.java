@@ -1,13 +1,16 @@
 package ar.com.facundoluna.inflacion.config;
 
 import ar.com.facundoluna.inflacion.application.port.out.IndecApiClientPort;
+import ar.com.facundoluna.inflacion.application.port.out.IndiceCategoriaRepositoryPort;
 import ar.com.facundoluna.inflacion.application.port.out.IndicadorIpcRepositoryPort;
 import ar.com.facundoluna.inflacion.application.usecase.CalcularPoderCompraUseCase;
 import ar.com.facundoluna.inflacion.application.usecase.ObtenerEvolucionIpcUseCase;
+import ar.com.facundoluna.inflacion.application.usecase.ObtenerRankingCategoriasUseCase;
 import ar.com.facundoluna.inflacion.application.usecase.ObtenerResumenIpcUseCase;
 import ar.com.facundoluna.inflacion.application.usecase.SincronizarIpcUseCase;
 import ar.com.facundoluna.inflacion.domain.service.CalculadoraPoderCompra;
 import ar.com.facundoluna.inflacion.domain.service.CalculadoraVariacionesIpc;
+import ar.com.facundoluna.inflacion.domain.service.CalculadoraVariacionesPorCategoria;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -31,9 +34,22 @@ public class UseCaseConfig {
     }
 
     @Bean
+    public CalculadoraVariacionesPorCategoria calculadoraVariacionesPorCategoria() {
+        return new CalculadoraVariacionesPorCategoria();
+    }
+
+    @Bean
     public SincronizarIpcUseCase sincronizarIpcUseCase(
-            IndecApiClientPort indecApiClient, IndicadorIpcRepositoryPort repositorio) {
-        return new SincronizarIpcUseCase(indecApiClient, repositorio);
+            IndecApiClientPort indecApiClient,
+            IndicadorIpcRepositoryPort repositorioNivelGeneral,
+            IndiceCategoriaRepositoryPort repositorioCategorias) {
+        return new SincronizarIpcUseCase(indecApiClient, repositorioNivelGeneral, repositorioCategorias);
+    }
+
+    @Bean
+    public ObtenerRankingCategoriasUseCase obtenerRankingCategoriasUseCase(
+            IndiceCategoriaRepositoryPort repositorio, CalculadoraVariacionesPorCategoria calculadora) {
+        return new ObtenerRankingCategoriasUseCase(repositorio, calculadora);
     }
 
     @Bean

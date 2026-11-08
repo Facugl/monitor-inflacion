@@ -12,6 +12,10 @@ public record IpcNacionalRegistroDto(
         String indicador,
         String tipo_de_indicador,
         String region,
+        /** Nivel de la clasificación: "Nivel General" o "División". */
+        String nivel,
+        /** Código COICOP: "0" para el nivel general, "01".."12" para las divisiones. */
+        String codigo,
         String descripcion,
         Double valor
 ) {
