@@ -5,6 +5,14 @@ spring:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:monitor_inflacion}
     username: ${DB_USER:monitor_inflacion}
     password: ${DB_PASSWORD:monitor_inflacion}
+    hikari:
+      # Postgres serverless (Neon y parecidos) cobra por tiempo de cómputo activo,
+      # y una conexión abierta alcanza para que nunca se duerma. Con minimum-idle
+      # en 0 el pool suelta las conexiones ociosas y la base puede pausarse sola.
+      # El precio es un poco de latencia en la primera consulta después del idle.
+      maximum-pool-size: ${DB_POOL_MAX:5}
+      minimum-idle: ${DB_POOL_MIN_IDLE:0}
+      idle-timeout: ${DB_POOL_IDLE_TIMEOUT_MS:60000}
   jpa:
     hibernate:
       ddl-auto: validate

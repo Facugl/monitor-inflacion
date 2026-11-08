@@ -1,0 +1,35 @@
+# Blueprint de Render. Tiene que vivir en la raíz del repo, aunque el servicio
+# sea solo el backend.
+#
+# La base NO se declara acá: Postgres va en Neon (free, no vence) y se conecta
+# por las variables SPRING_DATASOURCE_*. Render también ofrece Postgres, pero su
+# instancia gratuita expira; Neon evita tener que migrar en unos meses.
+services:
+  - type: web
+    name: monitor-inflacion-api
+    runtime: docker
+    plan: free
+    region: oregon
+
+    # rootDir limita los rebuilds a cambios del backend, pero NO afecta a las
+    # dos rutas de abajo: Render las resuelve siempre desde la raíz del repo.
+    # Si el build falla con "Dockerfile not found", ese es el motivo.
+    rootDir: backend
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+
+    healthCheckPath: /actuator/health
+
+    # sync: false => Render los pide a mano al crear el blueprint y nunca
+    # quedan escritos en el repo. El token del INDEC no se versiona.
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: INDEC_API_TOKEN
+        sync: false
+      - key: APP_CORS_ALLOWED_ORIGINS
+        sync: false
