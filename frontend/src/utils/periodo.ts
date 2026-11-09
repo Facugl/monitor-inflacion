@@ -10,6 +10,16 @@ export function formatearPeriodo(codigoAAAAMM: string): string {
   return `${MESES[mes - 1]} ${anio}`;
 }
 
+/**
+ * Convierte "202610" -> "oct 26". Para ejes angostos, donde "oct 2026" repetido
+ * doce veces no entra y las etiquetas se pisan entre sí.
+ */
+export function formatearPeriodoCorto(codigoAAAAMM: string): string {
+  const anio = codigoAAAAMM.slice(2, 4);
+  const mes = parseInt(codigoAAAAMM.slice(4, 6), 10);
+  return `${MESES[mes - 1]} ${anio}`;
+}
+
 /** Período actual menos N meses, en formato AAAAMM. */
 export function periodoHaceNMeses(n: number, desde = new Date()): string {
   const fecha = new Date(desde.getFullYear(), desde.getMonth() - n, 1);

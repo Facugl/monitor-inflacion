@@ -7,7 +7,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { formatearPeriodo } from "../utils/periodo";
+import { formatearPeriodo, formatearPeriodoCorto } from "../utils/periodo";
 import type { VariacionIpc } from "../api/client";
 
 /*
@@ -57,20 +57,24 @@ function techoLindo(maximo: number): number {
   return multiplo * magnitud;
 }
 
-type Punto = { periodo: string; valor: number | null };
+type Punto = {
+  /** Lo que se dibuja en el eje: "nov 24". */
+  etiqueta: string;
+  /** Lo que se lee en el tooltip, donde sí hay lugar: "nov 2024". */
+  etiquetaLarga: string;
+  valor: number | null;
+};
 
 function Serie({
   titulo,
   descripcion,
   puntos,
   color,
-  intervaloEjeX,
 }: {
   titulo: string;
   descripcion: string;
   puntos: Punto[];
   color: string;
-  intervaloEjeX: number;
 }) {
   const techo = techoLindo(
     Math.max(...puntos.map((p) => p.valor ?? 0))
@@ -93,12 +97,20 @@ function Serie({
       <ResponsiveContainer width="100%" height={220}>
         <LineChart data={puntos} margin={{ top: 5, right: 16, bottom: 0, left: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={GRILLA} vertical={false} />
+          {/*
+            * preserveStartEnd + minTickGap deja que Recharts mida el ancho real y
+            * tire las etiquetas que no entran. Un interval fijo no sirve: el número
+            * de etiquetas que entran depende del ancho, y en mobile se pisaban unas
+            * con otras. Los dos gráficos comparten datos y ancho, así que descartan
+            * las mismas y el eje se sigue leyendo como uno solo.
+            */}
           <XAxis
-            dataKey="periodo"
+            dataKey="etiqueta"
             stroke={EJE}
             fontSize={11}
             tickMargin={6}
-            interval={intervaloEjeX}
+            interval="preserveStartEnd"
+            minTickGap={16}
           />
           <YAxis
             stroke={EJE}
@@ -112,6 +124,8 @@ function Serie({
             cursor={{ stroke: EJE, strokeDasharray: "3 3" }}
             contentStyle={ESTILO_TOOLTIP}
             labelStyle={{ color: "#e2e8f0" }}
+            labelFormatter={((_: unknown, carga: { payload?: Punto }[] | undefined) =>
+              carga?.[0]?.payload?.etiquetaLarga ?? "") as never}
             formatter={((valor: unknown) => [`${Number(valor).toFixed(2)}%`, titulo]) as never}
           />
           <Line
@@ -132,23 +146,21 @@ function Serie({
 
 export function GraficoEvolucionIpc({ datos }: { datos: VariacionIpc[] }) {
   const etiquetas = datos.map((d) => formatearPeriodo(d.periodo));
+  const etiquetasCortas = datos.map((d) => formatearPeriodoCorto(d.periodo));
 
-  const mensual: Punto[] = datos.map((d, i) => ({
-    periodo: etiquetas[i],
-    valor: d.variacionMensualPct,
-  }));
-  const interanual: Punto[] = datos.map((d, i) => ({
-    periodo: etiquetas[i],
-    valor: d.variacionInteranualPct,
-  }));
+  const punto = (i: number, valor: number | null): Punto => ({
+    etiqueta: etiquetasCortas[i],
+    etiquetaLarga: etiquetas[i],
+    valor,
+  });
+
+  const mensual = datos.map((d, i) => punto(i, d.variacionMensualPct));
+  const interanual = datos.map((d, i) => punto(i, d.variacionInteranualPct));
 
   const rango =
     etiquetas.length > 1
       ? `${etiquetas[0]} – ${etiquetas[etiquetas.length - 1]}`
       : etiquetas[0];
-
-  // Mismo salto de ticks en los dos para que el eje X se lea como uno compartido.
-  const intervaloEjeX = Math.max(Math.ceil(datos.length / 8) - 1, 0);
 
   return (
     <div className="rounded-2xl bg-slate-900/60 border border-white/10 p-6">
@@ -163,14 +175,12 @@ export function GraficoEvolucionIpc({ datos }: { datos: VariacionIpc[] }) {
           descripcion="Cuánto subieron los precios respecto del mes anterior."
           puntos={mensual}
           color={COLOR_MENSUAL}
-          intervaloEjeX={intervaloEjeX}
         />
         <Serie
           titulo="Variación interanual"
           descripcion="Cuánto subieron respecto del mismo mes del año anterior."
           puntos={interanual}
           color={COLOR_INTERANUAL}
-          intervaloEjeX={intervaloEjeX}
         />
       </div>
     </div>
