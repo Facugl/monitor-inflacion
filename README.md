@@ -1,6 +1,15 @@
 # Monitor de Inflación Argentina
 
+[![CI](https://github.com/Facugl/monitor-inflacion/actions/workflows/ci.yml/badge.svg)](https://github.com/Facugl/monitor-inflacion/actions/workflows/ci.yml)
+[![Demo en vivo](https://img.shields.io/badge/demo-en_vivo-0d9ce6)](https://monitor-inflacion.vercel.app)
+![Java 17](https://img.shields.io/badge/Java-17-007396?logo=openjdk&logoColor=white)
+![Spring Boot 3.3](https://img.shields.io/badge/Spring_Boot-3.3-6DB33F?logo=springboot&logoColor=white)
+![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+
 **[Ver el dashboard en vivo](https://monitor-inflacion.vercel.app)** · [API](https://monitor-inflacion-api.onrender.com/docs)
+
+![Variación mensual, interanual y acumulada del IPC, y la evolución de las dos primeras en gráficos separados](docs/dashboard.png)
 
 Dashboard que sincroniza el IPC desde la [API pública del INDEC](https://api.indec.gob.ar/docs)
 hacia una base propia, calcula variación mensual / interanual / acumulada, muestra qué
@@ -9,6 +18,17 @@ nominal fijo mes a mes.
 
 Backend en **Java 17 + Spring Boot 3** con arquitectura hexagonal (dominio sin dependencias
 de framework, puertos y adaptadores), frontend en **React + TypeScript**.
+
+Las dos series van en gráficos separados y no en uno con doble eje: la mensual se
+mueve entre 1% y 4%, la interanual llegó a 200%. En el mismo eje la mensual queda
+plana contra el cero, y con un segundo eje a la derecha el punto donde se cruzan
+las líneas lo decide la escala elegida, no los datos.
+
+![Ranking de las 12 divisiones COICOP por variación mensual, y el simulador de poder de compra](docs/ranking.png)
+
+El ranking marca con una línea vertical el nivel general del mes, para leer cada
+división contra el promedio. El simulador toma un sueldo nominal fijo y muestra
+cuánto vale hoy a precios del período inicial.
 
 ## Stack
 
