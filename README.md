@@ -221,9 +221,3 @@ En Windows, `.\mvnw.cmd test` / `.\mvnw.cmd verify`.
 cd frontend
 npm run build             # type-check + build de producción
 ```
-
-## Nota sobre este proyecto
-
-Hecho como pieza de portfolio para demostrar el stack de
-[Facundo Luna](https://github.com/Facugl) — backend developer (Java/Spring Boot) — usando
-datos públicos y de actualidad (la API-INDEC es nueva, en beta al momento de este proyecto).
