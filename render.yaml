@@ -11,12 +11,15 @@ services:
     plan: free
     region: oregon
 
-    # rootDir limita los rebuilds a cambios del backend, pero NO afecta a las
-    # dos rutas de abajo: Render las resuelve siempre desde la raíz del repo.
-    # Si el build falla con "Dockerfile not found", ese es el motivo.
+    # OJO con las tres rutas de abajo. La documentación del blueprint dice que
+    # dockerfilePath y dockerContext se resuelven desde la raíz del repo, pero
+    # en los hechos se resuelven desde rootDir: con "./backend/Dockerfile" el
+    # build falla con
+    #   lstat /opt/render/project/src/backend/backend: no such file or directory
+    # o sea, backend/ aplicado dos veces. Por eso van relativas a backend/.
     rootDir: backend
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
 
     healthCheckPath: /actuator/health
 
