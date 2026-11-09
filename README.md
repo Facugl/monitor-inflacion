@@ -6,6 +6,7 @@
 ![Spring Boot 3.3](https://img.shields.io/badge/Spring_Boot-3.3-6DB33F?logo=springboot&logoColor=white)
 ![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+[![MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 **[Ver el dashboard en vivo](https://monitor-inflacion.vercel.app)** · [API](https://monitor-inflacion-api.onrender.com/docs)
 
@@ -241,3 +242,7 @@ En Windows, `.\mvnw.cmd test` / `.\mvnw.cmd verify`.
 cd frontend
 npm run build             # type-check + build de producción
 ```
+
+## Licencia
+
+[MIT](LICENSE) — usalo, copialo o modificalo libremente.
