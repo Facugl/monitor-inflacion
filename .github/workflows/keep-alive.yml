@@ -1,0 +1,38 @@
+name: Mantener el backend despierto
+
+# El plan gratuito de Render apaga el servicio tras ~15 minutos sin tráfico, y
+# levantar un Spring Boot de nuevo lleva cerca de un minuto. Quien caiga justo en
+# ese momento ve una pantalla en blanco. Este ping evita que se duerma.
+#
+# Le pega a /actuator/health/liveness y NO a /actuator/health, que es lo que uno
+# escribiría por reflejo: el health completo incluye el indicador de la base, que
+# abre una conexión y corre una query de validación. Pegándole cada 10 minutos,
+# Neon nunca se dormiría — y el plan free de Neon se consume por tiempo de cómputo
+# activo, así que el ping terminaría quemando la cuota de la base para mantener
+# viva la API. liveness responde sin tocar Postgres.
+
+on:
+  schedule:
+    # El cron de GitHub Actions es "best effort": en horas pico se atrasa, a veces
+    # bastante. Por eso cada 10 y no cada 14: deja margen hasta los 15 de Render.
+    # Si igual se atrasa, el costo es que un visitante pague el arranque en frío.
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+# Si un ping quedó colgado esperando un arranque en frío, el siguiente lo reemplaza
+# en vez de apilarse.
+concurrency:
+  group: keep-alive
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Pingear el backend
+        run: |
+          curl --fail --silent --show-error \
+               --max-time 120 --retry 2 --retry-delay 30 --retry-all-errors \
+               -o /dev/null -w 'liveness %{http_code} en %{time_total}s\n' \
+               https://monitor-inflacion-api.onrender.com/actuator/health/liveness

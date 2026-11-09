@@ -1,5 +1,7 @@
 # Monitor de Inflación Argentina
 
+**[Ver el dashboard en vivo](https://monitor-inflacion.vercel.app)** · [API](https://monitor-inflacion-api.onrender.com/docs)
+
 Dashboard que sincroniza el IPC desde la [API pública del INDEC](https://api.indec.gob.ar/docs)
 hacia una base propia, calcula variación mensual / interanual / acumulada, muestra qué
 rubro aumentó más en el mes, y simula qué le pasa al poder de compra de un sueldo
@@ -114,8 +116,8 @@ las variables marcadas con `sync: false`: las tres de arriba más
 `INDEC_API_TOKEN`. `APP_CORS_ALLOWED_ORIGINS` queda para el paso 4.
 
 El plan free **se duerme tras unos minutos de inactividad**, y despertar un Spring
-Boot lleva cerca de un minuto. Es el costo de no pagar. Si el link va a estar en
-un post, conviene un ping periódico que lo mantenga vivo.
+Boot lleva cerca de un minuto. Es el costo de no pagar; ver [Mantenerlo
+despierto](#mantenerlo-despierto) más abajo.
 
 Cuando termine, copiá la URL del servicio.
 
@@ -141,6 +143,24 @@ APP_CORS_ALLOWED_ORIGINS    https://TU-APP.vercel.app
 
 Sin esto el navegador bloquea las llamadas por CORS y el dashboard se ve vacío
 aunque la API responda bien.
+
+### Mantenerlo despierto
+
+[`keep-alive.yml`](.github/workflows/keep-alive.yml) pinguea el backend cada 10
+minutos para que Render no lo apague.
+
+Le pega a `/actuator/health/liveness`, no a `/actuator/health`. La diferencia
+importa: el health completo incluye el indicador de la base, que abre una conexión
+y corre una query de validación. Un ping cada 10 minutos contra ese endpoint
+mantendría a Neon despierto las 24 horas, y el free de Neon se mide en tiempo de
+cómputo activo — el ping terminaría gastando la cuota de la base para sostener la
+API. `liveness` responde sin tocar Postgres.
+
+Dos límites que conviene saber: el cron de GitHub Actions es *best effort* y en
+horas pico se atrasa, y GitHub desactiva los workflows programados en repos sin
+commits por 60 días (avisa por mail antes). Si hace falta puntualidad real, un
+cron externo tipo [cron-job.org](https://cron-job.org) contra la misma URL es más
+confiable, a cambio de quedar fuera del repo.
 
 ### Primera carga de datos
 
