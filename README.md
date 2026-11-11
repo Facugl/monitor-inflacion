@@ -167,8 +167,12 @@ aunque la API responda bien.
 
 ### Mantenerlo despierto
 
-[`keep-alive.yml`](.github/workflows/keep-alive.yml) pinguea el backend cada 10
-minutos para que Render no lo apague.
+[`keep-alive.yml`](.github/workflows/keep-alive.yml) pinguea el backend para que
+Render no lo apague. **Por sí solo no alcanza**: el cron está declarado cada 10
+minutos, pero GitHub descarta la mayoría de las ejecuciones programadas y en la
+práctica corre una cada varias horas. Render duerme a los 15 minutos, así que
+para mantenerlo despierto de verdad hace falta además un cron externo —
+[cron-job.org](https://cron-job.org) o similar— contra la misma URL.
 
 Le pega a `/actuator/health/liveness`, no a `/actuator/health`. La diferencia
 importa: el health completo incluye el indicador de la base, que abre una conexión
@@ -177,11 +181,8 @@ mantendría a Neon despierto las 24 horas, y el free de Neon se mide en tiempo d
 cómputo activo — el ping terminaría gastando la cuota de la base para sostener la
 API. `liveness` responde sin tocar Postgres.
 
-Dos límites que conviene saber: el cron de GitHub Actions es *best effort* y en
-horas pico se atrasa, y GitHub desactiva los workflows programados en repos sin
-commits por 60 días (avisa por mail antes). Si hace falta puntualidad real, un
-cron externo tipo [cron-job.org](https://cron-job.org) contra la misma URL es más
-confiable, a cambio de quedar fuera del repo.
+El otro límite: GitHub desactiva los workflows programados en repos sin commits
+por 60 días (avisa por mail antes).
 
 ### Primera carga de datos
 
