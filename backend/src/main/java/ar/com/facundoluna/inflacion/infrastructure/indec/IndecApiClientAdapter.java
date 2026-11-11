@@ -1,6 +1,7 @@
 package ar.com.facundoluna.inflacion.infrastructure.indec;
 
 import ar.com.facundoluna.inflacion.application.port.out.IndecApiClientPort;
+import ar.com.facundoluna.inflacion.application.port.out.IndecApiNoDisponibleException;
 import ar.com.facundoluna.inflacion.domain.model.CategoriaIpc;
 import ar.com.facundoluna.inflacion.domain.model.IndiceCategoriaIpc;
 import ar.com.facundoluna.inflacion.domain.model.NivelGeneralIpc;
@@ -9,12 +10,17 @@ import ar.com.facundoluna.inflacion.domain.model.RegionIpc;
 import ar.com.facundoluna.inflacion.domain.model.SerieTipo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.web.client.ClientHttpRequestFactories;
+import org.springframework.boot.web.client.ClientHttpRequestFactorySettings;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriBuilder;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +41,18 @@ public class IndecApiClientAdapter implements IndecApiClientPort {
 
     private static final Logger log = LoggerFactory.getLogger(IndecApiClientAdapter.class);
     private static final int TAMANIO_PAGINA = 1000;
+
+    /*
+     * Sin timeout explícito, el cliente espera indefinidamente. Cuando la API-INDEC
+     * dejó de responder, una sincronización se quedó colgada un minuto entero antes
+     * de cortar, y el usuario que apretó el botón del dashboard se comió esa espera
+     * para recibir después un error genérico.
+     *
+     * Diez segundos alcanzan de sobra para una página de 1000 filas y hacen que la
+     * caída se note enseguida. Es por request, no por sincronización completa: la
+     * serie se trae en varias páginas y cada una tiene su propio margen.
+     */
+    private static final Duration TIMEOUT = Duration.ofSeconds(10);
     private static final ParameterizedTypeReference<List<IpcNacionalRegistroDto>> TIPO_PAGINA =
             new ParameterizedTypeReference<>() {};
 
@@ -57,6 +75,10 @@ public class IndecApiClientAdapter implements IndecApiClientPort {
     public IndecApiClientAdapter(IndecApiProperties properties) {
         this.properties = properties;
         this.restClient = RestClient.builder()
+                .requestFactory(ClientHttpRequestFactories.get(
+                        ClientHttpRequestFactorySettings.DEFAULTS
+                                .withConnectTimeout(TIMEOUT)
+                                .withReadTimeout(TIMEOUT)))
                 .baseUrl(properties.baseUrl())
                 .defaultHeader("Authorization", "Bearer " + properties.token())
                 .build();
@@ -106,10 +128,7 @@ public class IndecApiClientAdapter implements IndecApiClientPort {
 
         do {
             final int paginaOffset = offset;
-            List<IpcNacionalRegistroDto> pagina = restClient.get()
-                    .uri(uriBuilder -> armarUri(uriBuilder, desde, filtrosExtra, orden, paginaOffset))
-                    .retrieve()
-                    .body(TIPO_PAGINA);
+            List<IpcNacionalRegistroDto> pagina = traerPagina(desde, filtrosExtra, orden, paginaOffset);
 
             if (pagina == null) {
                 pagina = List.of();
@@ -123,6 +142,31 @@ public class IndecApiClientAdapter implements IndecApiClientPort {
         } while (recibidos == TAMANIO_PAGINA);
 
         return resultado;
+    }
+
+    /**
+     * Una página de la API-INDEC, traduciendo sus caídas a {@link IndecApiNoDisponibleException}.
+     *
+     * <p>Que el INDEC no conteste no es un error de este sistema, así que no debería
+     * salir como un 500: la capa web lo convierte en un 503, que es lo que de verdad
+     * le pasa a quien llama —"probá más tarde"— y además le dice a los monitoreos que
+     * el problema es de un tercero.</p>
+     */
+    private List<IpcNacionalRegistroDto> traerPagina(
+            PeriodoMensual desde, Map<String, String> filtrosExtra, String orden, int offset) {
+        try {
+            return restClient.get()
+                    .uri(uriBuilder -> armarUri(uriBuilder, desde, filtrosExtra, orden, offset))
+                    .retrieve()
+                    .body(TIPO_PAGINA);
+        } catch (ResourceAccessException e) {
+            // Timeout de conexión o de lectura: la API no llegó a contestar.
+            throw new IndecApiNoDisponibleException(
+                    "La API-INDEC no respondió dentro de los " + TIMEOUT.toSeconds() + " segundos", e);
+        } catch (HttpServerErrorException e) {
+            throw new IndecApiNoDisponibleException(
+                    "La API-INDEC respondió con un error " + e.getStatusCode().value(), e);
+        }
     }
 
     private java.net.URI armarUri(

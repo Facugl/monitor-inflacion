@@ -1,5 +1,6 @@
 package ar.com.facundoluna.inflacion.infrastructure.web;
 
+import ar.com.facundoluna.inflacion.application.port.out.IndecApiNoDisponibleException;
 import ar.com.facundoluna.inflacion.application.usecase.ObtenerEvolucionIpcUseCase;
 import ar.com.facundoluna.inflacion.application.usecase.ObtenerRankingCategoriasUseCase;
 import ar.com.facundoluna.inflacion.application.usecase.ObtenerResumenIpcUseCase;
@@ -49,6 +50,21 @@ class IpcControllerTest {
                 .andExpect(jsonPath("$.puntosSincronizados").value(182))
                 .andExpect(jsonPath("$.puntosNivelGeneral").value(14))
                 .andExpect(jsonPath("$.puntosCategorias").value(168));
+    }
+
+    @Test
+    void sincronizarDevuelve503CuandoLaApiDelIndecNoResponde() throws Exception {
+        // Que el proveedor esté caído no es una falla de este sistema: un 500 le diría
+        // al que llama (y a cualquier monitoreo) que el bug es nuestro.
+        given(sincronizarIpcUseCase.ejecutar())
+                .willThrow(new IndecApiNoDisponibleException(
+                        "La API-INDEC no respondió dentro de los 10 segundos", new RuntimeException()));
+
+        mockMvc.perform(post("/api/v1/ipc/sync"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.status").value(503))
+                .andExpect(jsonPath("$.mensaje").value(
+                        org.hamcrest.Matchers.containsString("La API-INDEC no respondió")));
     }
 
     @Test

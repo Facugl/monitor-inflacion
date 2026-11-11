@@ -1,5 +1,8 @@
 package ar.com.facundoluna.inflacion.infrastructure.web.config;
 
+import ar.com.facundoluna.inflacion.application.port.out.IndecApiNoDisponibleException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -13,6 +16,21 @@ import java.util.NoSuchElementException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    /**
+     * La API-INDEC caída no es un error de este sistema: 503 y no 500.
+     *
+     * <p>El mensaje se devuelve tal cual porque está escrito para que lo lea una
+     * persona en pantalla, no para describir un stack trace.</p>
+     */
+    @ExceptionHandler(IndecApiNoDisponibleException.class)
+    public ResponseEntity<Map<String, Object>> handleIndecNoDisponible(IndecApiNoDisponibleException ex) {
+        log.warn("La API-INDEC no está disponible: {}", ex.getMessage());
+        return error(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage()
+                + ". Es un problema del INDEC, no del monitor: los datos ya cargados se siguen viendo.");
+    }
 
     @ExceptionHandler(NoSuchElementException.class)
     public ResponseEntity<Map<String, Object>> handleNoSuchElement(NoSuchElementException ex) {
